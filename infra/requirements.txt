@@ -1,0 +1,26 @@
+# --- Ingestion & Extraction ---
+PyMuPDF
+unstructured
+pytesseract
+gdown
+
+# --- Embedding & Vector Database ---
+sentence-transformers
+chromadb
+
+# --- LLM, Agents & Orchestration ---
+langgraph
+openai
+langchain
+agno
+groq
+duckduckgo-search
+python-dotenv
+
+# --- UI ---
+streamlit
+
+# --- Document & Schema Generation ---
+weasyprint
+diagrams
+graphviz

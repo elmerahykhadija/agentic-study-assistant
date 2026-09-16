@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  assistant-etudes:
+    build:
+      context: ../  # Points to the root directory for the build context
+      dockerfile: infra/Dockerfile
+    container_name: crag_study_assistant
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../:/app  # Mounts your local code for hot-reloading
+      - chromadb_data:/app/chroma_db # Persists the vector database storage
+    env_file:
+      - .env
+    restart: unless-stopped
+
+volumes:
+  chromadb_data:
