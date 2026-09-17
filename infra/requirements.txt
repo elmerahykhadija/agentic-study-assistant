@@ -12,11 +12,14 @@ chromadb
 langgraph
 openai
 langchain
+langchain-text-splitters
+langchain-community
 agno
 groq
 duckduckgo-search
 python-dotenv
-
+duckduckgo-search
+ddgs
 # --- UI ---
 streamlit
 
