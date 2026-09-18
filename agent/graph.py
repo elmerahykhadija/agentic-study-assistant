@@ -10,6 +10,7 @@ from tools.web_search import perform_web_search
 from vectorstore.chroma_client import retrieve_context
 from agent.evaluator import evaluate_context
 from agent.generator_router import route_to_generator
+from agent.visual_generator import generate_visual_diagram
 
 # ==========================================
 # 1. DÉFINITION DE LA MÉMOIRE (STATE)
@@ -64,9 +65,11 @@ def generate_text_node(state: GraphState):
 
 def generate_visual_node(state: GraphState):
     print("\n▶️ NŒUD : Générateur Visuel (Schéma/PDF)")
-    # Simulation pour l'instant (On ajoutera WeasyPrint/Graphviz ici ensuite)
-    return {"final_answer": "[GÉNÉRATION VISUELLE] Création du diagramme ou du PDF en cours..."}
-
+    
+    # On génère le diagramme
+    answer = generate_visual_diagram(state["user_input"], state["context"])
+    
+    return {"final_answer": answer}
 # ==========================================
 # 3. LA LOGIQUE DE ROUTAGE (EDGES)
 # ==========================================
