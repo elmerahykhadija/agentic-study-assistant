@@ -11,6 +11,7 @@ from vectorstore.chroma_client import retrieve_context
 from agent.evaluator import evaluate_context
 from agent.generator_router import route_to_generator
 from agent.visual_generator import generate_visual_diagram
+from agent.text_generator import generate_standard_answer
 
 # ==========================================
 # 1. DÉFINITION DE LA MÉMOIRE (STATE)
@@ -22,6 +23,7 @@ class GraphState(TypedDict):
     evaluation: str       # 'correct', 'ambiguous', 'incorrect'
     generation_route: str # 'standard_text' ou 'visual_document'
     final_answer: str
+    chat_history: list    # L'historique des messages Streamlit
 
 # ==========================================
 # 2. LES NŒUDS D'ACTION (NODES)
@@ -60,14 +62,22 @@ def route_generator_node(state: GraphState):
 
 def generate_text_node(state: GraphState):
     print("\n▶️ NŒUD : Générateur de Texte Standard")
-    # Simulation pour l'instant (On ajoutera le vrai LLM ici ensuite)
-    return {"final_answer": "[GÉNÉRATION TEXTE] Réponse basée sur le contexte validé."}
+    answer = generate_standard_answer(
+        state["user_input"], 
+        state["context"], 
+        state.get("chat_history", [])
+    )
+    return {"final_answer": answer}
 
 def generate_visual_node(state: GraphState):
     print("\n▶️ NŒUD : Générateur Visuel (Schéma/PDF)")
     
     # On génère le diagramme
-    answer = generate_visual_diagram(state["user_input"], state["context"])
+    answer = generate_visual_diagram(
+        state["user_input"], 
+        state["context"], 
+        chat_history=state.get("chat_history", [])
+    )
     
     return {"final_answer": answer}
 # ==========================================

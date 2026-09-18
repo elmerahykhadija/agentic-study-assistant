@@ -1,12 +1,10 @@
 import sys
 import os
-from langchain.tools import tool
-
+ 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ingestion.pipeline import run_ingestion_pipeline
 from vectorstore.chroma_client import store_chunks_in_db # <-- NOUVEL IMPORT
 
-@tool
 def extract_course_from_drive(drive_url: str) -> str:
     """Extrait le contenu d'un cours depuis Google Drive, le segmente et le stocke dans la base vectorielle."""
     try:

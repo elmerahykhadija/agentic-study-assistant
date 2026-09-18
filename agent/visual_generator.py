@@ -12,7 +12,7 @@ DEFAULT_OUTPUT_PATH = os.path.join(PROJECT_ROOT, "data", "diagram_output")
 # Chargement de la clé API
 load_dotenv(os.path.join(PROJECT_ROOT, "infra", ".env"))
 
-def generate_visual_diagram(question: str, context: str, output_path: str = DEFAULT_OUTPUT_PATH) -> str:
+def generate_visual_diagram(question: str, context: str, output_path: str = DEFAULT_OUTPUT_PATH, chat_history: list = None) -> str:
     """
     Génère un schéma d'architecture ou un logigramme basé sur le contexte.
     L'agent génère du code DOT (Graphviz) qui est ensuite compilé en PDF/PNG.
@@ -36,6 +36,10 @@ def generate_visual_diagram(question: str, context: str, output_path: str = DEFA
     
     prompt = f"CONTEXT:\n{context}\n\nREQUEST: {question}"
     
+    if chat_history:
+        history_str = "\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in chat_history])
+        prompt = f"CHAT HISTORY:\n{history_str}\n\n{prompt}"
+        
     print("🎨 Génération du diagramme en cours...")
     
     try:

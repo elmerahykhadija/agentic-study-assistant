@@ -6,9 +6,9 @@ from dotenv import load_dotenv
 # Chargement de la clé API
 load_dotenv('../infra/.env')
 
-def generate_standard_answer(question: str, context: str) -> str:
+def generate_standard_answer(question: str, context: str, chat_history: list = None) -> str:
     """
-    Prend le contexte (approuvé par le CRAG ou issu du Web) et génère la réponse finale.
+    Prend le contexte (approuvé par le CRAG ou issu du Web) et génère la réponse finale en tenant compte de l'historique.
     """
     system_prompt = """
     You are a clear and precise pedagogical study assistant.
@@ -28,8 +28,12 @@ def generate_standard_answer(question: str, context: str) -> str:
         description=system_prompt,
     )
     
-    prompt = f"CONTEXTE:\n{context}\n\nQUESTION: {question}"
+    prompt = f"CONTEXT:\n{context}\n\nQUESTION: {question}"
     
+    if chat_history:
+        history_str = "\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in chat_history])
+        prompt = f"CHAT HISTORY:\n{history_str}\n\n{prompt}"
+        
     print("💬 Génération de la réponse textuelle en cours...")
     
     try:
