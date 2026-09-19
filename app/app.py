@@ -26,15 +26,33 @@ with st.sidebar:
     
     # Option Lien Drive
     drive_link = st.text_input("🔗 Lier un dossier Google Drive public")
+    use_ocr = st.checkbox("Activer l'OCR (lent, utile pour les scans d'images)", value=False)
+    
     if st.button("Vectoriser le Drive", use_container_width=True):
         if drive_link:
-            with st.spinner("Téléchargement, OCR et vectorisation en cours..."):
-                inputs = {"user_input": drive_link, "input_type": "lien"}
+            status_text = st.empty()
+            progress_bar = st.progress(0.0)
+            
+            def update_progress(msg, prog=None):
+                status_text.text(msg)
+                if prog is not None:
+                    # S'assurer que prog reste entre 0.0 et 1.0
+                    progress_bar.progress(min(max(prog, 0.0), 1.0))
+                    
+            with st.spinner("Traitement en cours..."):
+                inputs = {
+                    "user_input": drive_link, 
+                    "input_type": "lien",
+                    "use_ocr": use_ocr,
+                    "progress_callback": update_progress
+                }
                 try:
                     for output in langgraph_app.stream(inputs):
                         for key, value in output.items():
                             if "final_answer" in value:
                                 st.success(value["final_answer"])
+                                status_text.empty()
+                                progress_bar.empty()
                 except Exception as e:
                     st.error(f"Erreur d'ingestion : {e}")
         else:
@@ -46,7 +64,38 @@ with st.sidebar:
     uploaded_file = st.file_uploader("📄 Uploader un document", type=["pdf", "png", "jpg"])
     if st.button("Vectoriser le fichier", use_container_width=True):
         if uploaded_file:
-            st.info("Le parseur de document local sera bientôt connecté à ce bouton !")
+            import tempfile
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{uploaded_file.name.split('.')[-1]}") as tmp_file:
+                tmp_file.write(uploaded_file.getvalue())
+                tmp_file_path = tmp_file.name
+
+            status_text = st.empty()
+            progress_bar = st.progress(0.0)
+            
+            def update_progress(msg, prog=None):
+                status_text.text(msg)
+                if prog is not None:
+                    progress_bar.progress(min(max(prog, 0.0), 1.0))
+                    
+            with st.spinner("Traitement du fichier en cours..."):
+                inputs = {
+                    "user_input": tmp_file_path, 
+                    "input_type": "document",
+                    "use_ocr": use_ocr,
+                    "progress_callback": update_progress
+                }
+                try:
+                    for output in langgraph_app.stream(inputs):
+                        for key, value in output.items():
+                            if "final_answer" in value:
+                                st.success(value["final_answer"])
+                                status_text.empty()
+                                progress_bar.empty()
+                except Exception as e:
+                    st.error(f"Erreur d'analyse : {e}")
+                finally:
+                    if os.path.exists(tmp_file_path):
+                        os.remove(tmp_file_path)
         else:
             st.warning("Veuillez sélectionner un fichier.")
             

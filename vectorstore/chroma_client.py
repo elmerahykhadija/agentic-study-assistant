@@ -14,9 +14,9 @@ def get_chroma_collection():
     client = chromadb.PersistentClient(path=CHROMA_PATH)
     
     # Modèle d'embedding recommandé dans la roadmap (performant pour le multilingue FR/EN/AR)
-    # Note : Lors du premier lancement, le modèle sera téléchargé automatiquement.
+    # Remplacé par paraphrase-multilingual-MiniLM-L12-v2 pour une vectorisation beaucoup plus rapide
     embedding_func = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name="BAAI/bge-m3"
+        model_name="paraphrase-multilingual-MiniLM-L12-v2"
     )
     
     # On crée une "collection" (l'équivalent d'une table SQL) pour stocker les cours
@@ -27,12 +27,13 @@ def get_chroma_collection():
     
     return collection
 
-def store_chunks_in_db(chunks):
+def store_chunks_in_db(chunks, progress_callback=None):
     """
     Prend les chunks générés par le pipeline d'ingestion et les sauvegarde dans ChromaDB.
     """
     if not chunks:
         print("⚠️ Aucun chunk à stocker.")
+        if progress_callback: progress_callback("Aucun document trouvé.", 1.0)
         return False
         
     collection = get_chroma_collection()
@@ -44,12 +45,19 @@ def store_chunks_in_db(chunks):
     ids = [f"{chunk['source']}_{chunk['chunk_id']}" for chunk in chunks]
     
     print(f"🧠 Vectorisation et insertion de {len(chunks)} chunks dans ChromaDB...")
+    if progress_callback: progress_callback("Préparation de la vectorisation...", 0.6)
     
     # Insertion par lots (batching) pour éviter les surcharges de RAM (OOM) et montrer la progression
     batch_size = 50
     for i in range(0, len(documents), batch_size):
         end = min(i + batch_size, len(documents))
-        print(f"🔄 Traitement du lot {i} à {end} sur {len(documents)}...")
+        msg = f"🔄 Traitement du lot {i} à {end} sur {len(documents)}..."
+        print(msg)
+        if progress_callback:
+            # Plage 0.6 -> 0.9 pour le stockage
+            progress = 0.6 + (0.3 * (end / len(documents)))
+            progress_callback(msg, progress)
+            
         collection.upsert(
             documents=documents[i:end],
             metadatas=metadatas[i:end],
@@ -57,6 +65,7 @@ def store_chunks_in_db(chunks):
         )
     
     print("✅ Stockage vectoriel terminé avec succès !")
+    if progress_callback: progress_callback("Vectorisation et stockage terminés !", 1.0)
     return True
 
 def retrieve_context(query_text, n_results=4):

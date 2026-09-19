@@ -7,21 +7,25 @@ from langgraph.graph import StateGraph, END
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from tools.drive_tool import extract_course_from_drive
 from tools.web_search import perform_web_search
-from vectorstore.chroma_client import retrieve_context
+from tools.document_parser import parse_local_document
+from vectorstore.chroma_client import retrieve_context, get_chroma_collection
 from agent.evaluator import evaluate_context
 from agent.generator_router import route_to_generator
 from agent.visual_generator import generate_visual_diagram
 from agent.text_generator import generate_standard_answer
+from agent.pdf_generator import generate_pdf_report
 
 # ==========================================
 # 1. DÉFINITION DE LA MÉMOIRE (STATE)
 # ==========================================
-class GraphState(TypedDict):
+class GraphState(TypedDict, total=False):
     user_input: str
     input_type: str       # 'question', 'lien', ou 'document'
+    use_ocr: bool
+    progress_callback: any # Callable pour Streamlit UI
     context: str          # Les chunks récupérés
     evaluation: str       # 'correct', 'ambiguous', 'incorrect'
-    generation_route: str # 'standard_text' ou 'visual_document'
+    generation_route: str # 'standard_text', 'visual_document', ou 'pdf_document'
     final_answer: str
     chat_history: list    # L'historique des messages Streamlit
 
@@ -30,13 +34,17 @@ class GraphState(TypedDict):
 # ==========================================
 def ingest_drive_node(state: GraphState):
     print("\n▶️ NŒUD : Ingestion Drive")
-    result = extract_course_from_drive(state["user_input"])
+    use_ocr = state.get("use_ocr", False)
+    progress_cb = state.get("progress_callback", None)
+    result = extract_course_from_drive(state["user_input"], use_ocr=use_ocr, progress_callback=progress_cb)
     return {"final_answer": f"{result}\n(Vous pouvez maintenant poser des questions sur ce cours !)"}
 
 def ingest_document_node(state: GraphState):
     print("\n▶️ NŒUD : Parsing de document/image direct")
-    # Plus tard, on connectera ici ton fichier tools/document_parser.py
-    return {"final_answer": "Document local analysé et vectorisé avec succès.\n(Vous pouvez maintenant poser des questions sur ce fichier !)"}
+    use_ocr = state.get("use_ocr", False)
+    progress_cb = state.get("progress_callback", None)
+    result = parse_local_document(state["user_input"], use_ocr=use_ocr, progress_callback=progress_cb)
+    return {"final_answer": f"{result}\n(Vous pouvez maintenant poser des questions sur ce fichier !)"}
 
 def retrieve_node(state: GraphState):
     print("\n▶️ NŒUD : Récupération du contexte (ChromaDB)")
@@ -80,6 +88,17 @@ def generate_visual_node(state: GraphState):
     )
     
     return {"final_answer": answer}
+
+def generate_pdf_node(state: GraphState):
+    print("\n▶️ NŒUD : Générateur PDF")
+    
+    answer = generate_pdf_report(
+        state["user_input"], 
+        state["context"], 
+        chat_history=state.get("chat_history", [])
+    )
+    
+    return {"final_answer": answer}
 # ==========================================
 # 3. LA LOGIQUE DE ROUTAGE (EDGES)
 # ==========================================
@@ -92,7 +111,15 @@ def orchestrator_router(state: GraphState):
     elif input_type == "document":
         return "ingest_document"
     else: # Si c'est "question" (ou qst)
-        return "retrieve"
+        # Vérifier si l'utilisateur a inséré un lien ou pdf (base de données non vide)
+        try:
+            collection = get_chroma_collection()
+            if collection.count() > 0:
+                return "retrieve"
+            else:
+                return "web_search"
+        except Exception:
+            return "web_search"
 
 def crag_router(state: GraphState):
     """Route selon la qualité du contexte (Correct ou Fallback Web)."""
@@ -101,8 +128,10 @@ def crag_router(state: GraphState):
     return "web_search"
 
 def generation_router(state: GraphState):
-    """Route selon l'intention (Texte ou Visuel)."""
-    if state["generation_route"] == "visual_document":
+    """Route selon l'intention (Texte, Visuel, ou PDF)."""
+    if state["generation_route"] == "pdf_document":
+        return "generate_pdf"
+    elif state["generation_route"] == "visual_document":
         return "generate_visual"
     return "generate_text"
 
@@ -120,6 +149,7 @@ workflow.add_node("web_search", web_search_node)
 workflow.add_node("route_generator", route_generator_node)
 workflow.add_node("generate_text", generate_text_node)
 workflow.add_node("generate_visual", generate_visual_node)
+workflow.add_node("generate_pdf", generate_pdf_node)
 
 # Définition des chemins
 workflow.set_conditional_entry_point(
@@ -127,7 +157,8 @@ workflow.set_conditional_entry_point(
     {
         "ingest_drive": "ingest_drive", 
         "ingest_document": "ingest_document",
-        "retrieve": "retrieve"
+        "retrieve": "retrieve",
+        "web_search": "web_search"
     }
 )
 
@@ -144,10 +175,11 @@ workflow.add_conditional_edges(
 workflow.add_edge("web_search", "route_generator")
 workflow.add_conditional_edges(
     "route_generator", generation_router,
-    {"generate_visual": "generate_visual", "generate_text": "generate_text"}
+    {"generate_pdf": "generate_pdf", "generate_visual": "generate_visual", "generate_text": "generate_text"}
 )
 workflow.add_edge("generate_text", END)
 workflow.add_edge("generate_visual", END)
+workflow.add_edge("generate_pdf", END)
 
 # Compilation
 app = workflow.compile()

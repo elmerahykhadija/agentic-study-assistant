@@ -9,16 +9,17 @@ load_dotenv('../infra/.env')
 def route_to_generator(user_query: str) -> str:
     """
     Analyse l'intention de l'utilisateur pour déterminer le type de réponse attendu.
-    Retourne 'standard_text' ou 'visual_document'.
+    Retourne 'standard_text', 'visual_document' ou 'pdf_document'.
     """
     router_system_prompt = """You are an intent routing classifier. Your sole purpose is to analyze the user's query and route it to the correct generation pipeline.
 
 Routing Rules:
-- If the user explicitly asks to generate a diagram, schema, visual representation, roadmap, flowchart, or asks to export/generate a PDF document -> Output EXACTLY "visual_document".
+- If the user explicitly asks to generate a PDF document, PDF report, or PDF summary -> Output EXACTLY "pdf_document".
+- If the user explicitly asks to generate a diagram, schema, visual representation, roadmap, or flowchart (but NOT a PDF) -> Output EXACTLY "visual_document".
 - For any other query (e.g., standard questions, summaries, definitions, explanations, standard text generation) -> Output EXACTLY "standard_text".
 
 CRITICAL INSTRUCTIONS:
-- You must output ONLY one of the two exact strings: "visual_document" or "standard_text".
+- You must output ONLY one of the three exact strings: "pdf_document", "visual_document", or "standard_text".
 - Do NOT output any other text, punctuation, explanations, or conversational filler.
 - If you are unsure, default to "standard_text".
 """
@@ -27,7 +28,7 @@ CRITICAL INSTRUCTIONS:
     router_agent = Agent(
         model=Groq(id="openai/gpt-oss-120b"),
         description=router_system_prompt,
-        instructions=["Réponds uniquement par 'visual_document' ou 'standard_text'."]
+        instructions=["Réponds uniquement par 'pdf_document', 'visual_document' ou 'standard_text'."]
     )
     
     print(f"🚦 Analyse de l'intention pour : '{user_query}'...")
@@ -37,7 +38,7 @@ CRITICAL INSTRUCTIONS:
         route = response.content.strip().lower()
         
         # Sécurité : Fallback sur le texte standard si le LLM hallucine son format
-        if route not in ["visual_document", "standard_text"]:
+        if route not in ["pdf_document", "visual_document", "standard_text"]:
             print(f"⚠️ Réponse inattendue du routeur ('{route}'). Bascule par défaut sur 'standard_text'.")
             return "standard_text"
             
