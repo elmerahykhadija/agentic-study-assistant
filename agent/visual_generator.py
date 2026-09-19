@@ -44,7 +44,18 @@ def generate_visual_diagram(question: str, context: str, output_path: str = DEFA
     
     try:
         # 1. Demander le code au LLM
-        response = generator_agent.run(prompt)
+        try:
+            response = generator_agent.run(prompt)
+        except Exception as e:
+            if "429" in str(e) or "rate" in str(e).lower() or "quota" in str(e).lower() or "expire" in str(e).lower() or "insufficient" in str(e).lower():
+                print("⚠️ Limite de tokens atteinte, bascule sur l'API 2...")
+                fallback_agent = Agent(
+                    model=Groq(id="openai/gpt-oss-120b", api_key=os.getenv("GROQ_API_KEY2")),
+                    description=system_prompt
+                )
+                response = fallback_agent.run(prompt)
+            else:
+                raise e
         content = response.content
         
         # 2. Extraire le code DOT des balises Markdown

@@ -39,8 +39,19 @@ def evaluate_context(question: str, context: str) -> str:
     print(f"⚖️ CRAG Evaluator analyse le contexte...")
     
     try:
-        # Exécution de l'agent
-        response = evaluator_agent.run(prompt)
+        try:
+            response = evaluator_agent.run(prompt)
+        except Exception as e:
+            if "429" in str(e) or "rate" in str(e).lower() or "quota" in str(e).lower() or "expire" in str(e).lower() or "insufficient" in str(e).lower():
+                print("⚠️ Limite de tokens atteinte, bascule sur l'API 2...")
+                fallback_agent = Agent(
+                    model=Groq(id="openai/gpt-oss-120b", api_key=os.getenv("GROQ_API_KEY2")), 
+                    description=evaluator_system_prompt,
+                    instructions=["Answer only with a decimal number (e.g., 0.75)."]
+                )
+                response = fallback_agent.run(prompt)
+            else:
+                raise e
         
         # On nettoie la réponse pour ne garder que le chiffre
         score_str = response.content.strip()

@@ -37,7 +37,18 @@ def generate_standard_answer(question: str, context: str, chat_history: list = N
     print("💬 Génération de la réponse textuelle en cours...")
     
     try:
-        response = generator_agent.run(prompt)
+        try:
+            response = generator_agent.run(prompt)
+        except Exception as e:
+            if "429" in str(e) or "rate" in str(e).lower() or "quota" in str(e).lower() or "expire" in str(e).lower() or "insufficient" in str(e).lower():
+                print("⚠️ Limite de tokens atteinte, bascule sur l'API 2...")
+                fallback_agent = Agent(
+                    model=Groq(id="openai/gpt-oss-120b", api_key=os.getenv("GROQ_API_KEY2")),
+                    description=system_prompt,
+                )
+                response = fallback_agent.run(prompt)
+            else:
+                raise e
         return response.content
     except Exception as e:
         print(f"❌ Erreur lors de la génération : {e}")
