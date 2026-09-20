@@ -4,7 +4,12 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![LangGraph](https://img.shields.io/badge/LangGraph-1C3C3C?style=for-the-badge&logo=graphql&logoColor=white)
 ![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6F00?style=for-the-badge&logo=database&logoColor=white)
-![Groq](https://img.shields.io/badge/Groq_(Llama_3)-000000?style=for-the-badge&logo=meta&logoColor=white)
+![Groq](https://img.shields.io/badge/Groq-000000?style=for-the-badge)
+![RAG](https://img.shields.io/badge/RAG-4CAF50?style=for-the-badge)
+![CRAG](https://img.shields.io/badge/CRAG-FF5722?style=for-the-badge)
+![Self-RAG](https://img.shields.io/badge/Self--RAG-9C27B0?style=for-the-badge)
+![Agno](https://img.shields.io/badge/Agno-673AB7?style=for-the-badge)
+![Agent](https://img.shields.io/badge/Agent-3F51B5?style=for-the-badge)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
 ## 📌 Contexte et Problématique
