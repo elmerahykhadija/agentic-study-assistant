@@ -6,6 +6,7 @@ from typing import List, Optional, Dict, Any
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 # Add project root to sys.path
@@ -24,6 +25,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- Mount Static Directories for Downloads ---
+pdf_output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'pdf_output'))
+diagram_output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'diagram_output'))
+
+os.makedirs(pdf_output_dir, exist_ok=True)
+os.makedirs(diagram_output_dir, exist_ok=True)
+
+app.mount("/api/download/pdf", StaticFiles(directory=pdf_output_dir), name="pdf_output")
+app.mount("/api/download/diagram", StaticFiles(directory=diagram_output_dir), name="diagram_output")
 
 # --- Modèles de données (Pydantic) ---
 

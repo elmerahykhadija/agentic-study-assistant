@@ -567,7 +567,7 @@ Produces ONLY valid HTML as the final output.
         HTML(string=html_content).write_pdf(pdf_path)
         
         print(f"✅ PDF généré avec succès : {pdf_path}")
-        return f"### 📄 Rapport Généré avec Succès\n\nVotre résumé au format PDF a été créé en respectant vos contraintes de thème, de longueur, et d'axes. \n\n📥 **[Cliquez ici pour consulter le rapport PDF](file://{pdf_path})**\n\n*(Le document a été généré en mode strict anti-hallucination en se basant uniquement sur la base de connaissances).* "
+        return f"### 📄 Rapport Généré avec Succès\n\nVotre résumé au format PDF a été créé en respectant vos contraintes de thème, de longueur, et d'axes. \n\n📥 **[Cliquez ici pour télécharger le PDF](http://localhost:8000/api/download/pdf/{pdf_filename})**\n\n*(Le document a été généré en mode strict anti-hallucination en se basant uniquement sur la base de connaissances).* "
         
     except Exception as e:
         print(f"❌ Erreur lors de la génération PDF : {e}")

@@ -4,15 +4,16 @@ from agno.agent import Agent
 from agno.models.groq import Groq
 from dotenv import load_dotenv
 import graphviz
+import uuid
 
 # Obtenir le chemin absolu de la racine du projet
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_OUTPUT_PATH = os.path.join(PROJECT_ROOT, "data", "diagram_output")
+DEFAULT_OUTPUT_DIR = os.path.join(PROJECT_ROOT, "data", "diagram_output")
 
 # Chargement de la clé API
 load_dotenv(os.path.join(PROJECT_ROOT, "infra", ".env"))
 
-def generate_visual_diagram(question: str, context: str, output_path: str = DEFAULT_OUTPUT_PATH, chat_history: list = None) -> str:
+def generate_visual_diagram(question: str, context: str, output_dir: str = DEFAULT_OUTPUT_DIR, chat_history: list = None) -> str:
     """
     Génère un schéma d'architecture ou un logigramme basé sur le contexte.
     L'agent génère du code DOT (Graphviz) qui est ensuite compilé en PDF/PNG.
@@ -343,15 +344,18 @@ def generate_visual_diagram(question: str, context: str, output_path: str = DEFA
             
         # 3. Sauvegarder et compiler avec Graphviz
         # S'assurer que le dossier existe
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        os.makedirs(output_dir, exist_ok=True)
+        session_id = str(uuid.uuid4())[:8]
+        file_prefix = os.path.join(output_dir, f"schema_{session_id}")
         
         graph = graphviz.Source(dot_code)
         # Rend le fichier en PDF et PNG
-        graph.render(output_path, format='png', cleanup=True)
-        graph.render(output_path, format='pdf', cleanup=True)
+        graph.render(file_prefix, format='png', cleanup=True)
+        graph.render(file_prefix, format='pdf', cleanup=True)
         
-        print(f"✅ Schéma généré avec succès : {output_path}.png et .pdf")
-        return f"[GÉNÉRATION VISUELLE] Le diagramme a été généré avec succès ! Vous pouvez le consulter ici : {output_path}.pdf"
+        print(f"✅ Schéma généré avec succès : {file_prefix}.png et .pdf")
+        base_name = f"schema_{session_id}"
+        return f"### 🎨 Schéma Généré avec Succès\n\nVotre diagramme a été généré avec succès !\n\n📥 **[Cliquez ici pour télécharger le PDF (haute qualité)](http://localhost:8000/api/download/diagram/{base_name}.pdf)**\n📥 **[Cliquez ici pour afficher l'image PNG](http://localhost:8000/api/download/diagram/{base_name}.png)**"
         
     except Exception as e:
         print(f"❌ Erreur lors de la génération visuelle : {e}")

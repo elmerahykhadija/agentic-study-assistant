@@ -19,9 +19,10 @@ Your ONLY task is to compare a GENERATED ANSWER against the provided CONTEXT.
 
 Rule: 
 Does the GENERATED ANSWER contain any factual claims, specific details, numbers, or conclusions that are NOT explicitly supported by the CONTEXT?
+Note: The CONTEXT may be messy or incomplete, especially if it contains web search snippets ("AJOUT WEB"). You must evaluate whether the core facts in the ANSWER can be reasonably derived from the CONTEXT, even if the ANSWER uses different wording, better formatting, or basic logical deductions.
 
-If everything in the ANSWER is supported by the CONTEXT, output: OUI
-If there is ANY hallucination, unsupported claim, or extra information, output: NON
+If the core facts in the ANSWER are reasonably supported by the CONTEXT, output: OUI
+If there is a clear hallucination or major unsupported factual claim completely absent from the CONTEXT, output: NON
 
 Output ONLY the word OUI or NON. Do not add any explanation or punctuation.
 """

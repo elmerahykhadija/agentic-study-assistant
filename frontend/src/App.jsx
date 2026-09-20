@@ -11,7 +11,9 @@ import {
   User,
   Loader2,
   RefreshCcw,
-  FileText
+  FileText,
+  MessageSquare,
+  X
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -31,6 +33,12 @@ function App() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const messagesEndRef = useRef(null);
 
+  // Historique des chats
+  const [chatHistory, setChatHistory] = useState(() => {
+    const saved = localStorage.getItem('study_assistant_chats');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -38,6 +46,45 @@ function App() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  // Sauvegarde de l'historique
+  useEffect(() => {
+    if (messages.length > 0) {
+      setChatHistory(prev => {
+        const newHistory = { ...prev };
+        newHistory[sessionId] = {
+          id: sessionId,
+          messages: messages,
+          title: messages[0]?.content.slice(0, 30) + '...',
+          updatedAt: Date.now()
+        };
+        localStorage.setItem('study_assistant_chats', JSON.stringify(newHistory));
+        return newHistory;
+      });
+    }
+  }, [messages, sessionId]);
+
+  const loadSession = (id) => {
+    const session = chatHistory[id];
+    if (session) {
+      setSessionId(id);
+      setMessages(session.messages);
+      if (window.innerWidth < 768) setSidebarOpen(false);
+    }
+  };
+
+  const deleteSession = (id, e) => {
+    e.stopPropagation();
+    setChatHistory(prev => {
+      const newHistory = { ...prev };
+      delete newHistory[id];
+      localStorage.setItem('study_assistant_chats', JSON.stringify(newHistory));
+      return newHistory;
+    });
+    if (sessionId === id) {
+      startNewConversation();
+    }
+  };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -116,21 +163,23 @@ function App() {
   };
 
   const clearDatabase = async () => {
-    if (!confirm("Êtes-vous sûr de vouloir purger toute la base de connaissances ?")) return;
+    if (!confirm("Êtes-vous sûr de vouloir purger toute la base de connaissances ? Cela n'effacera pas votre historique de chat local.")) return;
     try {
       await axios.post(`${API_BASE}/clear`, { session_id: sessionId });
       alert("Base purgée avec succès.");
       setUploadedFiles([]);
-      startNewConversation();
     } catch (error) {
       alert("Erreur lors de la purge.");
     }
   };
 
+  // Tri de l'historique par date décroissante
+  const sortedHistory = Object.values(chatHistory).sort((a, b) => b.updatedAt - a.updatedAt);
+
   return (
     <div className="flex h-screen bg-gray-50 text-gray-800 font-sans overflow-hidden">
       {/* Sidebar */}
-      <aside className={`bg-white border-r border-gray-200 transition-all duration-300 ${sidebarOpen ? 'w-80' : 'w-0'}`}>
+      <aside className={`bg-white border-r border-gray-200 transition-all duration-300 flex flex-col ${sidebarOpen ? 'w-80' : 'w-0'}`}>
         <div className="flex flex-col h-full w-80">
           <div className="p-6 flex items-center gap-3 border-b border-gray-100 shrink-0">
             <div className="bg-purple-600 p-2 rounded-xl text-white">
@@ -143,6 +192,13 @@ function App() {
 
           <div className="flex-1 overflow-y-auto p-6 space-y-8">
             <section>
+              <button
+                onClick={startNewConversation}
+                className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-3 px-4 rounded-lg transition-colors mb-6 shadow-sm"
+              >
+                <MessageSquare size={18} /> Nouvelle Conversation
+              </button>
+
               <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Base de Connaissances</h2>
 
               <div className="space-y-4">
@@ -158,9 +214,9 @@ function App() {
                   <button
                     onClick={handleDriveIngest}
                     disabled={isUploading}
-                    className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+                    className="w-full flex items-center justify-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 disabled:opacity-50 text-gray-700 text-sm font-medium py-2 px-4 rounded-lg transition-colors"
                   >
-                    {isUploading ? <Loader2 size={16} className="animate-spin" /> : <FolderSync size={16} />}
+                    {isUploading ? <Loader2 size={16} className="animate-spin text-purple-600" /> : <FolderSync size={16} className="text-purple-600" />}
                     {isUploading ? 'Vectorisation...' : 'Vectoriser Drive'}
                   </button>
                 </div>
@@ -178,16 +234,16 @@ function App() {
                     />
                     <label
                       htmlFor="file-upload"
-                      className={`w-full flex flex-col items-center justify-center gap-2 bg-white border-2 border-dashed border-gray-300 hover:border-purple-500 hover:bg-purple-50 text-gray-500 text-sm font-medium py-6 px-4 rounded-lg ${isUploading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'} transition-colors`}
+                      className={`w-full flex flex-col items-center justify-center gap-2 bg-white border border-dashed border-gray-300 hover:border-purple-500 hover:bg-purple-50 text-gray-500 text-sm font-medium py-4 px-4 rounded-lg ${isUploading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'} transition-colors`}
                     >
                       {isUploading ? (
                         <>
-                          <Loader2 size={24} className="animate-spin text-purple-500" />
+                          <Loader2 size={20} className="animate-spin text-purple-500" />
                           <span>Upload en cours...</span>
                         </>
                       ) : (
                         <>
-                          <UploadCloud size={24} className="text-purple-500" />
+                          <UploadCloud size={20} className="text-purple-500" />
                           <span>Uploader un document</span>
                           <span className="text-xs text-gray-400">PDF, DOC, DOCX</span>
                         </>
@@ -210,8 +266,40 @@ function App() {
               </div>
             </section>
 
+            {sortedHistory.length > 0 && (
+              <section>
+                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex justify-between items-center">
+                  Historique
+                  <span className="bg-gray-100 text-gray-500 py-0.5 px-2 rounded-full text-[10px]">{sortedHistory.length}</span>
+                </h2>
+                <div className="space-y-1">
+                  {sortedHistory.map((session) => (
+                    <div
+                      key={session.id}
+                      onClick={() => loadSession(session.id)}
+                      className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-colors group ${
+                        sessionId === session.id ? 'bg-purple-50 text-purple-700 border border-purple-100' : 'hover:bg-gray-100 text-gray-600 border border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <MessageSquare size={14} className={sessionId === session.id ? 'text-purple-500 shrink-0' : 'text-gray-400 shrink-0'} />
+                        <div className="truncate text-sm font-medium">{session.title}</div>
+                      </div>
+                      <button
+                        onClick={(e) => deleteSession(session.id, e)}
+                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                        title="Supprimer"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             <section>
-              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Gestion</h2>
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Paramètres</h2>
               <div className="space-y-3">
                 <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer bg-white p-3 rounded-lg border border-gray-200 transition-colors hover:bg-gray-50">
                   <input
@@ -223,16 +311,10 @@ function App() {
                   <span>Autoriser la recherche Web</span>
                 </label>
                 <button
-                  onClick={startNewConversation}
-                  className="w-full flex items-center gap-3 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 text-sm font-medium py-2.5 px-4 rounded-lg transition-colors"
-                >
-                  <RefreshCcw size={16} /> Nouvelle Session
-                </button>
-                <button
                   onClick={clearDatabase}
                   className="w-full flex items-center gap-3 bg-white hover:bg-red-50 text-red-600 border border-gray-200 hover:border-red-200 text-sm font-medium py-2.5 px-4 rounded-lg transition-colors"
                 >
-                  <Trash2 size={16} /> Purger la base
+                  <Trash2 size={16} /> Purger la base de données
                 </button>
               </div>
             </section>
@@ -271,11 +353,11 @@ function App() {
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 ${msg.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-purple-100 text-purple-600'}`}>
                     {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                   </div>
-                  <div className={`px-5 py-4 rounded-2xl max-w-[85%] shadow-sm ${msg.role === 'user'
+                  <div className={`px-5 py-4 rounded-2xl max-w-[85%] shadow-sm overflow-hidden ${msg.role === 'user'
                       ? 'bg-indigo-600 text-white rounded-tr-sm'
                       : 'bg-white text-gray-800 rounded-tl-sm border border-gray-200'
                     }`}>
-                    <div className="prose prose-purple max-w-none leading-relaxed text-[15px]">
+                    <div className={`prose max-w-none leading-relaxed text-[15px] ${msg.role === 'user' ? 'prose-invert' : 'prose-purple'}`}>
                       <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                         {msg.content}
                       </ReactMarkdown>
@@ -300,19 +382,19 @@ function App() {
         </div>
 
         <div className="absolute bottom-0 w-full bg-gradient-to-t from-white via-white to-transparent pt-8 pb-6 px-4 sm:px-8">
-          <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto relative group">
+          <form onSubmit={handleSendMessage} className="max-w-3xl mx-auto relative group flex gap-2">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Posez votre question sur le cours..."
               disabled={isLoading}
-              className="w-full bg-white border border-gray-300 shadow-sm rounded-full py-4 pl-6 pr-14 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-gray-800 disabled:bg-gray-50 transition-all text-base"
+              className="flex-1 bg-white border border-gray-300 shadow-sm rounded-full py-4 pl-6 pr-4 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-gray-800 disabled:bg-gray-50 transition-all text-base"
             />
             <button
               type="submit"
               disabled={!input.trim() || isLoading}
-              className="absolute right-2 top-2 bottom-2 aspect-square bg-purple-600 hover:bg-purple-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-full flex items-center justify-center transition-colors"
+              className="w-14 h-14 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-full flex items-center justify-center transition-colors shadow-sm shrink-0"
             >
               <Send size={18} className={input.trim() && !isLoading ? 'ml-0.5' : ''} />
             </button>
