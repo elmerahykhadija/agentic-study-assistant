@@ -24,6 +24,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [driveUrl, setDriveUrl] = useState('');
   const [useOcr, setUseOcr] = useState(false);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
   const [isUploading, setIsUploading] = useState(false);
@@ -51,7 +52,8 @@ function App() {
       const response = await axios.post(`${API_BASE}/chat`, {
         session_id: sessionId,
         message: input,
-        chat_history: messages
+        chat_history: messages,
+        web_search_enabled: webSearchEnabled
       });
 
       setMessages(prev => [...prev, { role: 'assistant', content: response.data.response }]);
@@ -221,7 +223,16 @@ function App() {
 
             <section>
               <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Gestion</h2>
-              <div className="space-y-2">
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer bg-white p-3 rounded-lg border border-gray-200 transition-colors hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4"
+                    checked={webSearchEnabled}
+                    onChange={(e) => setWebSearchEnabled(e.target.checked)}
+                  />
+                  <span>Autoriser la recherche Web</span>
+                </label>
                 <button
                   onClick={startNewConversation}
                   className="w-full flex items-center gap-3 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 text-sm font-medium py-2.5 px-4 rounded-lg transition-colors"

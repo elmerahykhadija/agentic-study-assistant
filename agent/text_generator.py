@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 # Chargement de la clé API
 load_dotenv('../infra/.env')
 
-def generate_standard_answer(question: str, context: str, chat_history: list = None) -> str:
+def generate_standard_answer(question: str, context: str, chat_history: list = None, grounding_feedback: str = None) -> str:
     """
     Prend le contexte (approuvé par le CRAG ou issu du Web) et génère la réponse finale en tenant compte de l'historique.
     """
@@ -124,20 +124,22 @@ For a complex technical question:
 - Use bullet points or numbered steps when appropriate.
 
 ==================================================
-6. MARKDOWN FORMATTING
+6. MARKDOWN FORMATTING & CITATIONS (CRITICAL)
 ==================================================
 
 Use Markdown to improve readability.
-
 You may use:
 - **Bold** for important concepts
 - Bullet points
-- Numbered lists
-- Tables
 - Short headings
-- Code blocks when code is explicitly present or requested
 
-Avoid excessive formatting.
+CITATIONS:
+You MUST include the source at the end of every important sentence or paragraph to justify your claims.
+The context contains metadata. Use the exact format: `[Source: nom_fichier, page X]`.
+If no page is provided, use: `[Source: nom_fichier]`.
+If the information comes from "AJOUT WEB", use: `[Source: Recherche Web]`.
+
+Example: "Le gradient descent est un algorithme d'optimisation [Source: cours_ML.pdf, page 14]."
 
 Do not use Markdown simply for decoration.
 
@@ -245,6 +247,9 @@ CONTEXT:
     if chat_history:
         history_str = "\n".join([f"{msg['role'].upper()}: {msg['content']}" for msg in chat_history])
         prompt = f"CHAT HISTORY:\n{history_str}\n\n{prompt}"
+        
+    if grounding_feedback:
+        prompt = f"{prompt}\n\nCRITICAL INSTRUCTION FROM EVALUATOR:\n{grounding_feedback}"
         
     print("💬 Génération de la réponse textuelle en cours...")
     

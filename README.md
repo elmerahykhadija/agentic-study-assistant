@@ -1,77 +1,85 @@
-# 🎓 Agentic Study Assistant : Architecture CRAG & LLMs Multimodaux
+🎓 Agentic Study Assistant : CRAG & Self-RAG Multimodal
 
-## 📌 Contexte
-Dans les cycles d'ingénierie avancés, particulièrement en Systèmes d'Information et Big Data, le volume de documentation académique et technique (polycopiés complexes, schémas d'architecture, TD, TP) est massif. Les étudiants perdent un temps précieux à rechercher des informations spécifiques à travers des centaines de pages non structurées.
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![LangGraph](https://img.shields.io/badge/LangGraph-1C3C3C?style=for-the-badge&logo=graphql&logoColor=white)
+![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6F00?style=for-the-badge&logo=database&logoColor=white)
+![Groq](https://img.shields.io/badge/Groq_(Llama_3)-000000?style=for-the-badge&logo=meta&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
-## ⚠️ Problématique
-- **Surcharge d'information** : La recherche manuelle dans des dossiers cloud massifs est inefficace.
-- **Hallucination des LLMs** : Les modèles génératifs standards (ChatGPT, Claude) inventent souvent des réponses lorsqu'ils sont interrogés sur des cours spécifiques et privés.
-- **Limites du RAG Classique** : Un système RAG (Retrieval-Augmented Generation) standard échoue silencieusement si la recherche vectorielle renvoie des données peu pertinentes, générant ainsi une réponse basée sur un mauvais contexte.
+## 📌 Contexte et Problématique
+Dans les cycles d'ingénierie, la recherche d'informations précises dans des centaines de pages de cours ou de schémas d'architecture est fastidieuse. Les solutions basées sur les LLMs génériques ou le RAG (Retrieval-Augmented Generation) classique présentent des failles majeures : 
+1. **Hallucinations** : Le LLM invente des réponses lorsque la recherche vectorielle échoue silencieusement.
+2. **Manque de réflexion** : Le système se contente du premier contexte trouvé sans vérifier sa pertinence.
+3. **Absence de multimodalité** : Les étudiants ont besoin de résumés PDF et de schémas conceptuels, pas seulement de texte brut.
 
-## 🎯 Objectif
-Concevoir un pipeline agentique de bout en bout capable d'ingérer de larges corpus de cours (depuis Google Drive ou en local), d'extraire intelligemment le texte (y compris via OCR pour les schémas scannés), et de fournir des réponses fiables à 100%. Le système doit être multimodal : capable d'expliquer des concepts sous forme de texte, de générer des diagrammes d'architecture, ou de consolider le savoir dans des rapports PDF dynamiques, tout en intégrant un filet de sécurité anti-hallucination.
+## 🎯 Solution : Architecture Agentique Avancée
+Ce projet implémente un pipeline agentique de bout en bout orchestré par **LangGraph**, intégrant les concepts de **CRAG (Corrective RAG)** et **Self-RAG**. 
 
-## 🧠 Pourquoi CRAG et pas un RAG classique ?
-Dans un RAG classique, le flux est linéaire et aveugle : `Question ➔ Recherche Vectorielle ➔ Génération`.
+Le système évalue activement le contexte récupéré dans la base vectorielle. Si le contexte est jugé insuffisant, un agent reformule la question et relance une recherche. Si l'échec persiste, le système peut basculer vers une recherche Web. Enfin, le système vérifie ses propres réponses pour garantir l'absence totale d'hallucinations avant de les afficher.
 
-**Le problème** : Si le système vectoriel ne trouve pas la bonne information (ou trouve un paragraphe ambigu), le LLM essaiera quand même de répondre, ce qui provoque des hallucinations.
+---
 
-Dans cette architecture **CRAG (Corrective RAG)**, un agent Évaluateur est inséré au cœur du système :
-`Question ➔ Recherche Vectorielle ➔ ÉVALUATION STRICTE ➔ (Routage dynamique) ➔ Génération`.
+## 🔄 Workflow : Le Parcours d'une Question
+Lorsqu'un utilisateur pose une question dans l'interface, celle-ci traverse une série d'étapes de validation et de réflexion avant que la réponse ne soit affichée :
 
-**La solution** : L'évaluateur note le contexte extrait (de 0.0 à 1.0) ou l'évalue catégoriquement (correct, ambigu, incorrect).
-- Si le score est bon, le contexte est approuvé pour la génération.
-- Si le score est insuffisant (Ambigu ou Incorrect), le système rejette le contexte interne et déclenche de manière autonome un outil de Recherche Web (DuckDuckGo).
+1. **Saisie Utilisateur :** La requête est envoyée depuis l'interface React vers l'API FastAPI avec son `session_id` unique pour garantir l'isolation des données.
+2. **Orchestration Initiale :** Le nœud d'entrée du graphe LangGraph détermine le type d'entrée (Lien Drive, Document, Question ou Salutation). Si c'est une simple salutation, il passe directement à la génération textuelle. Sinon, il l'envoie vers le moteur de recherche.
+3. **Récupération Vectorielle (Retrieval) :** Le système interroge ChromaDB pour extraire les fragments de cours les plus pertinents liés au `session_id` actif (intégrant un potentiel Reranker).
+4. **Évaluation CRAG :** Un agent LLM strict lit les fragments extraits et leur attribue un score de pertinence (`correct`, `ambiguous`, ou `incorrect`). 
+5. **Boucle de Correction (CRAG Router) :**
+   * **Reformulation :** Si le score est insuffisant et qu'aucune tentative n'a encore été faite, un agent dédié réécrit la question initiale.
+   * **Nouvelle Recherche :** Le système relance l'interrogation de la base de données.
+   * **Fallback Web :** Si la deuxième recherche échoue (ou est jugée insuffisante) et que l'utilisateur a activé le "Mode Web", le système interroge DuckDuckGo pour enrichir le contexte.
+6. **Analyse d'Intention :** Un agent classifieur lit la demande pour déterminer le format de sortie attendu (Texte standard, Schéma conceptuel, ou Rapport PDF).
+7. **Génération :** Le LLM spécialisé rédige la réponse (en Markdown, en code Graphviz, ou en HTML/CSS) en se basant *exclusivement* sur le contexte validé.
+8. **Auto-Vérification (Grounding/Self-RAG) :** Pour les réponses textuelles, un agent de contrôle vérifie que le texte généré ne contient aucune hallucination. Si une information inventée est détectée, un feedback strict est renvoyé au générateur qui doit recommencer (jusqu'à 2 essais).
+9. **Safe Fallback :** Si le générateur échoue de manière répétée au test d'anti-hallucination, un message de sécurité est renvoyé ("Je n'ai pas assez d'informations pour répondre avec précision").
+10. **Restitution Finale :** La réponse formatée, garantie fiable et sourcée, est transmise au frontend et affichée à l'utilisateur.
 
-**Avantage majeur** : Ce mécanisme garantit une tolérance zéro aux hallucinations, une qualité indispensable pour un système d'IA déployé en production.
+---
 
-## ⚙️ Explication des Composants (Architecture Agentique)
+## 🧠 Composants Clés
+
 L'application repose sur un écosystème d'agents spécialisés orchestrés par LangGraph, interagissant avec une mémoire vectorielle.
 
-- **`vectorstore/chroma_client.py`** : Le moteur de la base de données vectorielle. Il gère l'embedding des chunks de texte (via `paraphrase-multilingual-MiniLM-L12-v2` pour la performance) et permet des recherches de similarité ultra-rapides.
-- **`ingestion/pipeline.py` & `tools/document_parser.py`** : Le pipeline de Data Engineering. Utilise PyMuPDF pour l'extraction de texte et Tesseract OCR pour déchiffrer les schémas et images scannées, suivi d'un découpage sémantique intelligent (LangChain Recursive Text Splitter).
-- **`agent/evaluator.py`** : L'agent critique du CRAG. Propulsé par Llama-3, il évalue mathématiquement la pertinence du contexte extrait par rapport à la question.
-- **`tools/web_search.py`** : L'outil de secours (Fallback). Intègre un optimiseur de requête SEO (LLM) avant d'interroger le web via DuckDuckGo.
-- **`agent/generator_router.py`** : Le classifieur d'intention. Il analyse la question de l'utilisateur pour comprendre le format de sortie désiré et l'oriente vers le bon pipeline de génération (Texte, Visuel, PDF).
-- **Les Générateurs (`text_generator.py`, `visual_generator.py`, `pdf_generator.py`)** : Les nœuds finaux qui créent les livrables. Ils gèrent la synthèse Markdown, la génération de code Graphviz (DOT) pour les diagrammes d'architecture, et la compilation WeasyPrint pour les rapports HTML/PDF professionnels.
-- **`app/app.py`** : L'interface utilisateur interactive construite avec Streamlit, gérant l'historique de conversation (State) et la restitution visuelle des artefacts générés.
+*   **L'Orchestrateur LangGraph (`agent/graph.py`) :** Le cœur du système. Il modélise le graphe d'états (StateGraph), définissant l'enchaînement conditionnel entre les nœuds d'ingestion, de récupération, d'évaluation, et de génération.
+*   **Pipeline d'Ingestion & Data Engineering (`ingestion/pipeline.py`) :** Gère l'extraction de texte de documents locaux ou Google Drive. Utilise `PyMuPDF` pour le texte et `Tesseract OCR` pour déchiffrer les schémas et images scannées, suivi d'un découpage sémantique (Text Splitter).
+*   **Mémoire Vectorielle & Reranker (`vectorstore/chroma_client.py`, `agent/reranker.py`) :** Utilise ChromaDB avec un embedding `multilingual-MiniLM` pour une recherche de similarité ultra-rapide. **L'isolation des sessions** est garantie par un `session_id` unique pour chaque utilisateur. Un Reranker optimise ensuite l'ordre des documents retournés.
+*   **L'Évaluateur CRAG (`agent/evaluator.py`) :** L'agent critique (Llama-3) qui note de manière rigoureuse la pertinence du contexte extrait par rapport à la question. Il bloque les mauvais contextes.
+*   **Le Reformulateur de Requête (`agent/query_rewriter.py`) :** Si le contexte est jugé insuffisant par l'évaluateur, cet agent réécrit intelligemment la question de l'utilisateur pour améliorer la prochaine recherche vectorielle.
+*   **L'Outil de Recherche Web (`tools/web_search.py`) :** Le filet de sécurité (Fallback). Si le cours interne ne suffit pas, et si le bouton "Mode Web" est activé dans l'interface React, cet outil interroge le web via DuckDuckGo.
+*   **Le Classifieur d'Intention (`agent/generator_router.py`) :** Analyse la question pour déterminer si l'utilisateur souhaite une explication textuelle, un schéma, ou un rapport de synthèse PDF, puis le route vers le bon pipeline.
+*   **Les Générateurs Multimodaux :**
+    *   **Textuel (`agent/text_generator.py`) :** Synthèse Markdown pédagogique intégrant le contexte.
+    *   **Visuel (`agent/visual_generator.py`, `agent/generate_graph_png.py`) :** Génération autonome de code Graphviz (DOT) compilé en images (schémas conceptuels, architectures).
+    *   **Rapport PDF (`agent/pdf_generator.py`) :** Génération dynamique de code HTML/CSS thématique, puis compilation via WeasyPrint pour fournir des rapports PDF professionnels.
+*   **Le Grounding Checker (Self-RAG) (`agent/self_rag_evaluators.py`) :** Le dernier rempart anti-hallucination. Il relit la réponse finale générée et s'assure qu'absolument aucun fait non-présent dans le contexte validé n'a été inventé.
 
-## 🔄 Enchaînement du Workflow (Graphe LangGraph)
-L'orchestration est modélisée sous forme de graphe d'états (StateGraph). Voici le cycle de vie exact d'une requête :
+---
 
-1. **Routage Principal (`orchestrator_router`)** :
-   L'utilisateur soumet une requête. L'orchestrateur vérifie son type.
-   - S'il s'agit d'une URL Drive ou d'un fichier, le flux part vers l'ingestion (OCR ➔ Chunking ➔ ChromaDB) et s'arrête.
-   - S'il s'agit d'une question, le flux part vers le nœud de récupération (Retrieval).
+## 🚀 Déploiement (Docker Compose)
 
-2. **Récupération & Évaluation (`retrieve_node` ➔ `evaluate_node`)** :
-   Interrogation de ChromaDB. Le contexte est extrait puis envoyé à l'évaluateur CRAG.
+L'architecture est entièrement conteneurisée (Backend FastAPI + Frontend React/Vite + ChromaDB).
 
-3. **Routage CRAG (`crag_router`)** :
-   L'évaluateur rend son verdict. Si le contexte est fiable, passage à l'étape suivante. Si le contexte est insuffisant, détournement vers le `web_search_node` pour enrichissement en temps réel.
+**Prérequis :**
+- Docker & Docker Compose
+- Clé API Groq (Modèle Llama 3)
 
-4. **Analyse d'Intention (`route_generator_node`)** :
-   L'agent détermine le format de sortie attendu (Texte standard, Schéma PNG/PDF, Rapport PDF complexe).
+**Installation :**
 
-5. **Génération & Restitution** :
-   Le flux atteint le générateur approprié (`generate_text`, `generate_visual`, ou `generate_pdf`). L'agent final compile la réponse en respectant un prompt strict d'anti-hallucination et d'intégration de l'historique de conversation, puis renvoie le livrable à l'interface Streamlit.
-
-## 🚀 Déploiement et Utilisation
-L'ensemble de l'environnement est conteneurisé pour assurer une reproductibilité parfaite.
-
-**Prérequis** : Docker et Docker Compose.
-
-1. Clonez le dépôt et insérez vos identifiants dans le fichier d'environnement :
+1. Clonez le projet et configurez l'environnement :
    ```bash
    cp infra/.env.example infra/.env
-   # Ajoutez votre clé API Groq (GROQ_API_KEY)
+   # Insérez votre GROQ_API_KEY dans le fichier .env
    ```
 
-2. Construisez et lancez l'application via Docker :
+2. Lancez les services via Docker :
    ```bash
    cd infra
-   sudo docker-compose up --build -d
+   sudo docker compose up --build -d
    ```
 
-3. Accédez à l'interface utilisateur Streamlit via votre navigateur web :
-   [http://localhost:8501](http://localhost:8501)
+3. Accédez aux interfaces :
+   - **Frontend (React)** : http://localhost:5173
+   - **API Docs (FastAPI/Swagger)** : http://localhost:8000/docs

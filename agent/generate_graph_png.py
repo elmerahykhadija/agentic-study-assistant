@@ -7,7 +7,7 @@ sys.path.append(PROJECT_ROOT)
 
 from agent.graph import app
 
-output_path = os.path.join(PROJECT_ROOT, "imgs", "graph_architecture.png")
+output_path = os.path.join(PROJECT_ROOT, "imgs", "graph_architecture2.png")
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
 try:

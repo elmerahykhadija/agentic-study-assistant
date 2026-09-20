@@ -1,6 +1,8 @@
 # --- Ingestion & Extraction ---
 PyMuPDF
-unstructured
+unstructured[pdf]
+pdfminer.six
+pdf2image
 pytesseract
 gdown
 
@@ -8,6 +10,7 @@ gdown
 sentence-transformers
 chromadb
 torchvision
+rank_bm25
 
 # --- LLM, Agents & Orchestration ---
 langgraph

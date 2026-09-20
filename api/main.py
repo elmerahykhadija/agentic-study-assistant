@@ -35,6 +35,7 @@ class ChatRequest(BaseModel):
     session_id: str
     message: str
     chat_history: List[ChatMessage] = []
+    web_search_enabled: bool = False
 
 class DriveIngestRequest(BaseModel):
     session_id: str
@@ -53,6 +54,7 @@ async def chat(request: ChatRequest):
         "user_input": request.message,
         "input_type": "question",
         "session_id": request.session_id,
+        "web_search_enabled": request.web_search_enabled,
         "chat_history": [{"role": m.role, "content": m.content} for m in request.chat_history]
     }
     
