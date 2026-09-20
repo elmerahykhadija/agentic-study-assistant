@@ -26,7 +26,6 @@ class GraphState(TypedDict, total=False):
     user_input: str
     input_type: str       # 'question', 'lien', ou 'document'
     session_id: str       # Identifiant de conversation
-    use_ocr: bool
     web_search_enabled: bool # Activer/Désactiver DuckDuckGo
     retrieval_attempts: int  # Compteur de boucle CRAG
     generation_attempts: int # Compteur de boucle Grounding
@@ -44,16 +43,14 @@ class GraphState(TypedDict, total=False):
 # ==========================================
 def ingest_drive_node(state: GraphState):
     print("\n▶️ NŒUD : Ingestion Drive")
-    use_ocr = state.get("use_ocr", False)
     progress_cb = state.get("progress_callback", None)
-    result = extract_course_from_drive(state["user_input"], session_id=state.get("session_id", "default"), use_ocr=use_ocr, progress_callback=progress_cb)
+    result = extract_course_from_drive(state["user_input"], session_id=state.get("session_id", "default"), progress_callback=progress_cb)
     return {"final_answer": f"{result}\n(Vous pouvez maintenant poser des questions sur ce cours !)"}
 
 def ingest_document_node(state: GraphState):
     print("\n▶️ NŒUD : Parsing de document/image direct")
-    use_ocr = state.get("use_ocr", False)
     progress_cb = state.get("progress_callback", None)
-    result = parse_local_document(state["user_input"], session_id=state.get("session_id", "default"), use_ocr=use_ocr, progress_callback=progress_cb)
+    result = parse_local_document(state["user_input"], session_id=state.get("session_id", "default"), progress_callback=progress_cb)
     return {"final_answer": f"{result}\n(Vous pouvez maintenant poser des questions sur ce fichier !)"}
 
 def retrieve_node(state: GraphState):

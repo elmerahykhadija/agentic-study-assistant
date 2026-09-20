@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
 
 const API_BASE = 'http://localhost:8000/api';
 
@@ -23,7 +24,6 @@ function App() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [driveUrl, setDriveUrl] = useState('');
-  const [useOcr, setUseOcr] = useState(false);
   const [webSearchEnabled, setWebSearchEnabled] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
@@ -73,7 +73,6 @@ function App() {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('session_id', sessionId);
-    formData.append('use_ocr', useOcr);
 
     try {
       const response = await axios.post(`${API_BASE}/ingest/file`, formData, {
@@ -99,8 +98,7 @@ function App() {
     try {
       const response = await axios.post(`${API_BASE}/ingest/drive`, {
         session_id: sessionId,
-        drive_url: driveUrl,
-        use_ocr: useOcr
+        drive_url: driveUrl
       });
       alert(response.data.message);
       setUploadedFiles(prev => [...prev, driveUrl]);
@@ -157,15 +155,6 @@ function App() {
                     value={driveUrl}
                     onChange={(e) => setDriveUrl(e.target.value)}
                   />
-                  <label className="flex items-center gap-2 text-xs text-gray-600 mb-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="rounded text-purple-600 focus:ring-purple-500"
-                      checked={useOcr}
-                      onChange={(e) => setUseOcr(e.target.checked)}
-                    />
-                    Activer l'OCR (Images/Scans)
-                  </label>
                   <button
                     onClick={handleDriveIngest}
                     disabled={isUploading}
@@ -287,7 +276,7 @@ function App() {
                       : 'bg-white text-gray-800 rounded-tl-sm border border-gray-200'
                     }`}>
                     <div className="prose prose-purple max-w-none leading-relaxed text-[15px]">
-                      <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                         {msg.content}
                       </ReactMarkdown>
                     </div>

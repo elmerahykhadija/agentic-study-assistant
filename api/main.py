@@ -40,7 +40,6 @@ class ChatRequest(BaseModel):
 class DriveIngestRequest(BaseModel):
     session_id: str
     drive_url: str
-    use_ocr: bool = False
 
 # --- Endpoints ---
 
@@ -76,8 +75,7 @@ async def ingest_drive(request: DriveIngestRequest):
     inputs = {
         "user_input": request.drive_url,
         "input_type": "lien",
-        "session_id": request.session_id,
-        "use_ocr": request.use_ocr
+        "session_id": request.session_id
     }
     
     try:
@@ -93,8 +91,7 @@ async def ingest_drive(request: DriveIngestRequest):
 @app.post("/api/ingest/file")
 async def ingest_file(
     file: UploadFile = File(...), 
-    session_id: str = Form(...), 
-    use_ocr: bool = Form(False)
+    session_id: str = Form(...)
 ):
     # Enregistrer temporairement le fichier
     suffix = f".{file.filename.split('.')[-1]}" if '.' in file.filename else ""
@@ -106,8 +103,7 @@ async def ingest_file(
     inputs = {
         "user_input": tmp_file_path,
         "input_type": "document",
-        "session_id": session_id,
-        "use_ocr": use_ocr
+        "session_id": session_id
     }
     
     try:

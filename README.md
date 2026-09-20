@@ -36,7 +36,7 @@ Lorsqu'un utilisateur pose une question dans l'interface, celle-ci traverse une 
 8. **Auto-Vérification (Grounding/Self-RAG) :** Pour les réponses textuelles, un agent de contrôle vérifie que le texte généré ne contient aucune hallucination. Si une information inventée est détectée, un feedback strict est renvoyé au générateur qui doit recommencer (jusqu'à 2 essais).
 9. **Safe Fallback :** Si le générateur échoue de manière répétée au test d'anti-hallucination, un message de sécurité est renvoyé ("Je n'ai pas assez d'informations pour répondre avec précision").
 10. **Restitution Finale :** La réponse formatée, garantie fiable et sourcée, est transmise au frontend et affichée à l'utilisateur.
-
+![](imgs/template.png.png)
 ---
 
 ## 🧠 Composants Clés
@@ -44,7 +44,8 @@ Lorsqu'un utilisateur pose une question dans l'interface, celle-ci traverse une 
 L'application repose sur un écosystème d'agents spécialisés orchestrés par LangGraph, interagissant avec une mémoire vectorielle.
 
 *   **L'Orchestrateur LangGraph (`agent/graph.py`) :** Le cœur du système. Il modélise le graphe d'états (StateGraph), définissant l'enchaînement conditionnel entre les nœuds d'ingestion, de récupération, d'évaluation, et de génération.
-*   **Pipeline d'Ingestion & Data Engineering (`ingestion/pipeline.py`) :** Gère l'extraction de texte de documents locaux ou Google Drive. Utilise `PyMuPDF` pour le texte et `Tesseract OCR` pour déchiffrer les schémas et images scannées, suivi d'un découpage sémantique (Text Splitter).
+![](imgs/graph_architecture2.png)
+*   **Pipeline d'Ingestion & Data Engineering (`ingestion/pipeline.py`) :** Gère l'extraction de texte de documents locaux ou Google Drive. Utilise `PyMuPDF` pour le texte, suivi d'un découpage sémantique (Text Splitter).
 *   **Mémoire Vectorielle & Reranker (`vectorstore/chroma_client.py`, `agent/reranker.py`) :** Utilise ChromaDB avec un embedding `multilingual-MiniLM` pour une recherche de similarité ultra-rapide. **L'isolation des sessions** est garantie par un `session_id` unique pour chaque utilisateur. Un Reranker optimise ensuite l'ordre des documents retournés.
 *   **L'Évaluateur CRAG (`agent/evaluator.py`) :** L'agent critique (Llama-3) qui note de manière rigoureuse la pertinence du contexte extrait par rapport à la question. Il bloque les mauvais contextes.
 *   **Le Reformulateur de Requête (`agent/query_rewriter.py`) :** Si le contexte est jugé insuffisant par l'évaluateur, cet agent réécrit intelligemment la question de l'utilisateur pour améliorer la prochaine recherche vectorielle.

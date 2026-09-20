@@ -1,12 +1,7 @@
 import os
 import gdown
 import pymupdf  # PyMuPDF
-import pytesseract
-from PIL import Image
-import io
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from unstructured.partition.pdf import partition_pdf
-from unstructured.chunking.title import chunk_by_title
 
 # Configuration des dossiers
 DATA_DIR = '../data/'
@@ -46,37 +41,7 @@ def extract_and_chunk_pymupdf(pdf_path, chunk_size=1000, chunk_overlap=200):
                 })
     return chunks_with_meta
 
-def extract_and_chunk_unstructured(pdf_path, progress_callback=None):
-    """Utilise unstructured (hi_res) pour extraire avec l'OCR et grouper par titre (Scans complexes)."""
-    if progress_callback: progress_callback(f"Lancement d'Unstructured (OCR hi_res) sur {os.path.basename(pdf_path)}...", None)
-    
-    try:
-        elements = partition_pdf(
-            filename=pdf_path,
-            strategy="hi_res",
-            infer_bounding_boxes=True
-        )
-        
-        chunks = chunk_by_title(
-            elements,
-            combine_text_under_n_chars=500,
-            max_characters=1500,
-        )
-        
-        chunks_with_meta = []
-        for chunk in chunks:
-            page_number = chunk.metadata.page_number if hasattr(chunk, 'metadata') and hasattr(chunk.metadata, 'page_number') else 1
-            chunks_with_meta.append({
-                "content": str(chunk),
-                "page": page_number,
-                "heading": ""
-            })
-        return chunks_with_meta
-    except Exception as e:
-        print(f"⚠️ Erreur avec unstructured ({e}), bascule sur PyMuPDF...")
-        return extract_and_chunk_pymupdf(pdf_path)
-
-def run_ingestion_pipeline(drive_url, use_ocr=False, progress_callback=None):
+def run_ingestion_pipeline(drive_url, progress_callback=None):
     """Orchestre tout le pipeline d'ingestion (Étape 1)."""
     print("🚀 Lancement du Pipeline d'Ingestion...\n")
     if progress_callback: progress_callback("Initialisation de l'ingestion...", 0.05)
@@ -104,10 +69,7 @@ def run_ingestion_pipeline(drive_url, use_ocr=False, progress_callback=None):
             progress_callback(f"Extraction texte : {file_name}", prog)
         
         # Extraction & Chunking
-        if use_ocr:
-            file_chunks = extract_and_chunk_unstructured(file_path, progress_callback)
-        else:
-            file_chunks = extract_and_chunk_pymupdf(file_path)
+        file_chunks = extract_and_chunk_pymupdf(file_path)
             
         print(f"✂️ Document découpé en {len(file_chunks)} chunks.")
         

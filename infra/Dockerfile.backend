@@ -5,11 +5,8 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies required for OCR, PDF generation, and diagrams
+# Install system dependencies required for PDF generation and diagrams
 RUN apt-get -o Acquire::ForceIPv4=true update && apt-get -o Acquire::ForceIPv4=true install -y \
-    tesseract-ocr \
-    tesseract-ocr-fra \
-    tesseract-ocr-eng \
     poppler-utils \
     graphviz \
     libgl1 \

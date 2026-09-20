@@ -1,10 +1,7 @@
 # --- Ingestion & Extraction ---
 PyMuPDF
-unstructured[pdf]
-pdfminer.six
-pdf2image
-pytesseract
 gdown
+unstructured
 
 # --- Embedding & Vector Database ---
 sentence-transformers

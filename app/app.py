@@ -48,9 +48,7 @@ with st.sidebar:
     st.write("Ajoutez vos cours avant de poser des questions.")
     
     # Option Lien Drive
-    drive_link = st.text_input("🔗 Lier un dossier Google Drive public")
-    use_ocr = st.checkbox("Activer l'OCR (lent, utile pour les scans d'images)", value=False)
-    
+    drive_link = st.text_input("🔗 Lier un dossier Google Drive public")    
     if st.button("Vectoriser le Drive", use_container_width=True):
         if drive_link:
             status_text = st.empty()
@@ -67,7 +65,6 @@ with st.sidebar:
                     "user_input": drive_link, 
                     "input_type": "lien",
                     "session_id": st.session_state.session_id,
-                    "use_ocr": use_ocr,
                     "progress_callback": update_progress
                 }
                 try:
@@ -106,7 +103,6 @@ with st.sidebar:
                     "user_input": tmp_file_path, 
                     "input_type": "document",
                     "session_id": st.session_state.session_id,
-                    "use_ocr": use_ocr,
                     "progress_callback": update_progress
                 }
                 try:

@@ -1,14 +1,12 @@
 import sys
 import os
-from PIL import Image
-import pytesseract
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from ingestion.pipeline import extract_and_chunk_pymupdf, extract_and_chunk_unstructured
+from ingestion.pipeline import extract_and_chunk_pymupdf
 from vectorstore.chroma_client import store_chunks_in_db
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-def parse_local_document(file_path: str, session_id: str, use_ocr: bool = False, progress_callback = None) -> str:
+def parse_local_document(file_path: str, session_id: str, progress_callback = None) -> str:
     """Analyse un fichier local, le segmente et le stocke dans la base vectorielle."""
     try:
         file_name = os.path.basename(file_path)
@@ -18,10 +16,7 @@ def parse_local_document(file_path: str, session_id: str, use_ocr: bool = False,
         
         chunks = []
         if ext == '.pdf':
-            if use_ocr:
-                file_chunks = extract_and_chunk_unstructured(file_path, progress_callback)
-            else:
-                file_chunks = extract_and_chunk_pymupdf(file_path)
+            file_chunks = extract_and_chunk_pymupdf(file_path)
                 
             for i, chunk_data in enumerate(file_chunks):
                 chunks.append({
