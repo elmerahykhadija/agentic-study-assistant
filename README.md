@@ -41,7 +41,7 @@ Lorsqu'un utilisateur pose une question dans l'interface, celle-ci traverse une 
 8. **Auto-Vérification (Grounding/Self-RAG) :** Pour les réponses textuelles, un agent de contrôle vérifie que le texte généré ne contient aucune hallucination. Si une information inventée est détectée, un feedback strict est renvoyé au générateur qui doit recommencer (jusqu'à 2 essais).
 9. **Safe Fallback :** Si le générateur échoue de manière répétée au test d'anti-hallucination, un message de sécurité est renvoyé ("Je n'ai pas assez d'informations pour répondre avec précision").
 10. **Restitution Finale :** La réponse formatée, garantie fiable et sourcée, est transmise au frontend et affichée à l'utilisateur.
-![](imgs/template.png.png)
+![](imgs/template.png)
 ---
 
 ## 🧠 Composants Clés
