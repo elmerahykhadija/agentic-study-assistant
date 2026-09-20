@@ -21,6 +21,7 @@ from agent.pdf_generator import generate_pdf_report
 class GraphState(TypedDict, total=False):
     user_input: str
     input_type: str       # 'question', 'lien', ou 'document'
+    session_id: str       # Identifiant de conversation
     use_ocr: bool
     progress_callback: any # Callable pour Streamlit UI
     context: str          # Les chunks récupérés
@@ -36,20 +37,20 @@ def ingest_drive_node(state: GraphState):
     print("\n▶️ NŒUD : Ingestion Drive")
     use_ocr = state.get("use_ocr", False)
     progress_cb = state.get("progress_callback", None)
-    result = extract_course_from_drive(state["user_input"], use_ocr=use_ocr, progress_callback=progress_cb)
+    result = extract_course_from_drive(state["user_input"], session_id=state.get("session_id", "default"), use_ocr=use_ocr, progress_callback=progress_cb)
     return {"final_answer": f"{result}\n(Vous pouvez maintenant poser des questions sur ce cours !)"}
 
 def ingest_document_node(state: GraphState):
     print("\n▶️ NŒUD : Parsing de document/image direct")
     use_ocr = state.get("use_ocr", False)
     progress_cb = state.get("progress_callback", None)
-    result = parse_local_document(state["user_input"], use_ocr=use_ocr, progress_callback=progress_cb)
+    result = parse_local_document(state["user_input"], session_id=state.get("session_id", "default"), use_ocr=use_ocr, progress_callback=progress_cb)
     return {"final_answer": f"{result}\n(Vous pouvez maintenant poser des questions sur ce fichier !)"}
 
 def retrieve_node(state: GraphState):
     print("\n▶️ NŒUD : Récupération du contexte (ChromaDB)")
-    docs = retrieve_context(state["user_input"])
-    context_str = "\n".join(docs) if docs else "Aucun document trouvé dans la base."
+    docs = retrieve_context(state["user_input"], session_id=state.get("session_id", "default"))
+    context_str = "\n".join(docs) if docs else "Aucun document trouvé dans la base pour cette conversation."
     return {"context": context_str}
 
 def evaluate_node(state: GraphState):
@@ -105,16 +106,18 @@ def generate_pdf_node(state: GraphState):
 def orchestrator_router(state: GraphState):
     """Route l'entrée utilisateur (Lien Drive, Document ou Question)."""
     input_type = state.get("input_type")
+    session_id = state.get("session_id", "default")
     
     if input_type == "lien":
         return "ingest_drive"
     elif input_type == "document":
         return "ingest_document"
     else: # Si c'est "question" (ou qst)
-        # Vérifier si l'utilisateur a inséré un lien ou pdf (base de données non vide)
+        # Vérifier si l'utilisateur a inséré un lien ou pdf pour cette session
         try:
             collection = get_chroma_collection()
-            if collection.count() > 0:
+            results = collection.get(where={"session_id": session_id}, limit=1)
+            if results and results.get("ids") and len(results["ids"]) > 0:
                 return "retrieve"
             else:
                 return "web_search"

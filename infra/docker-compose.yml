@@ -1,21 +1,38 @@
 version: '3.8'
 
 services:
-  assistant-etudes:
+  backend:
     build:
-      context: ../  # Points to the root directory for the build context
-      dockerfile: infra/Dockerfile
-    container_name: crag_study_assistant
+      context: ../
+      dockerfile: infra/Dockerfile.backend
+    container_name: crag_study_backend
     ports:
-      - "8501:8501"
+      - "8000:8000"
     volumes:
-      - ../:/app  # Mounts your local code for hot-reloading
-      - chromadb_data:/app/chroma_db # Persists the vector database storage
+      - ../:/app
+      - chromadb_data:/app/chroma_db
     env_file:
       - .env
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=1
       - net.ipv6.conf.default.disable_ipv6=1
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../
+      dockerfile: infra/Dockerfile.frontend
+    container_name: crag_study_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../frontend:/app
+      # Ignore node_modules from host to use container's node_modules
+      - /app/node_modules
+    environment:
+      - VITE_API_BASE=http://localhost:8000/api
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:

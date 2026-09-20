@@ -32,8 +32,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # (Assumes Docker build context is the project root)
 COPY . .
 
-# Expose Streamlit's default port
-EXPOSE 8501
+# Expose FastAPI's default port
+EXPOSE 8000
 
-# Command to run the Streamlit application
-CMD ["streamlit", "run", "app/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Command to run the FastAPI application
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]

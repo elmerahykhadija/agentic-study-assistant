@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ingestion.pipeline import extract_text_with_ocr, chunk_document
 from vectorstore.chroma_client import store_chunks_in_db
 
-def parse_local_document(file_path: str, use_ocr: bool = False, progress_callback = None) -> str:
+def parse_local_document(file_path: str, session_id: str, use_ocr: bool = False, progress_callback = None) -> str:
     """Analyse un fichier local, le segmente et le stocke dans la base vectorielle."""
     try:
         file_name = os.path.basename(file_path)
@@ -16,12 +16,13 @@ def parse_local_document(file_path: str, use_ocr: bool = False, progress_callbac
         if progress_callback: progress_callback(f"Extraction du texte de {file_name}...", 0.2)
         
         raw_text = ""
-        if ext in ['.png', '.jpg', '.jpeg']:
-            if progress_callback: progress_callback(f"Lecture d'image via OCR...", 0.4)
-            image = Image.open(file_path)
-            raw_text = pytesseract.image_to_string(image, lang='fra+eng') + "\n"
-        elif ext == '.pdf':
+        if ext == '.pdf':
             raw_text = extract_text_with_ocr(file_path, use_ocr=use_ocr, progress_callback=progress_callback)
+        elif ext in ['.doc', '.docx']:
+            if progress_callback: progress_callback(f"Extraction du texte du document Word...", 0.4)
+            from unstructured.partition.auto import partition
+            elements = partition(filename=file_path)
+            raw_text = "\n\n".join([str(el) for el in elements])
         else:
             return f"Format de fichier non supporté: {ext}"
             
@@ -40,7 +41,7 @@ def parse_local_document(file_path: str, use_ocr: bool = False, progress_callbac
             })
             
         if progress_callback: progress_callback("Enregistrement dans la base de données...", 0.7)
-        success = store_chunks_in_db(chunks, progress_callback=progress_callback)
+        success = store_chunks_in_db(chunks, session_id=session_id, progress_callback=progress_callback)
         
         if progress_callback: progress_callback("Terminé !", 1.0)
         

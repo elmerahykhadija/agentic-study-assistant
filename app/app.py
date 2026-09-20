@@ -1,16 +1,39 @@
 import streamlit as st
 import sys
 import os
+import uuid
+import json
 
 # Ajout du chemin racine pour permettre les imports des modules backend
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from agent.graph import app as langgraph_app
 from vectorstore.chroma_client import clear_database
 
+# --- Gestion de l'historique local (Fichier JSON) ---
+HISTORY_FILE = "../data/chat_histories.json"
+
+def save_chat_history(session_id, messages):
+    """Sauvegarde la conversation active dans un fichier JSON."""
+    os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+    history_data = {}
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            try:
+                history_data = json.load(f)
+            except json.JSONDecodeError:
+                pass
+            
+    history_data[session_id] = messages
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history_data, f, ensure_ascii=False, indent=4)
+
 # --- Configuration de la page ---
 st.set_page_config(page_title="Agentic Study Assistant", page_icon="🎓", layout="wide")
 
 # --- Initialisation de la mémoire de chat ---
+if "session_id" not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4()) # ID unique pour la nouvelle conversation
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -43,6 +66,7 @@ with st.sidebar:
                 inputs = {
                     "user_input": drive_link, 
                     "input_type": "lien",
+                    "session_id": st.session_state.session_id,
                     "use_ocr": use_ocr,
                     "progress_callback": update_progress
                 }
@@ -61,7 +85,7 @@ with st.sidebar:
     st.markdown("---")
     
     # Option Fichier Local
-    uploaded_file = st.file_uploader("📄 Uploader un document", type=["pdf", "png", "jpg"])
+    uploaded_file = st.file_uploader("📄 Uploader un document", type=["pdf", "doc", "docx"])
     if st.button("Vectoriser le fichier", use_container_width=True):
         if uploaded_file:
             import tempfile
@@ -81,6 +105,7 @@ with st.sidebar:
                 inputs = {
                     "user_input": tmp_file_path, 
                     "input_type": "document",
+                    "session_id": st.session_state.session_id,
                     "use_ocr": use_ocr,
                     "progress_callback": update_progress
                 }
@@ -105,7 +130,10 @@ with st.sidebar:
     st.header("⚙️ Gestion")
     
     if st.button("🔄 Nouvelle Conversation", use_container_width=True):
+        if len(st.session_state.messages) > 0:
+            save_chat_history(st.session_state.session_id, st.session_state.messages)
         st.session_state.messages = []
+        st.session_state.session_id = str(uuid.uuid4())
         st.rerun()
         
     st.write("") # Espace
@@ -143,6 +171,7 @@ if prompt := st.chat_input("Demandez une explication, un résumé ou un schéma.
             inputs = {
                 "user_input": prompt, 
                 "input_type": "question",
+                "session_id": st.session_state.session_id,
                 "chat_history": history
             }
             final_response = "Une erreur est survenue lors de la réflexion."

@@ -21,6 +21,9 @@ duckduckgo-search
 python-dotenv
 duckduckgo-search
 ddgs
+fastapi
+uvicorn
+python-multipart
 # --- UI ---
 streamlit
 

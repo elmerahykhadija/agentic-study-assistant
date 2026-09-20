@@ -8,22 +8,115 @@ load_dotenv('../infra/.env')
 
 def route_to_generator(user_query: str) -> str:
     """
-    Analyse l'intention de l'utilisateur pour déterminer le type de réponse attendu.
-    Retourne 'standard_text', 'visual_document' ou 'pdf_document'.
+    Classify the user's request and route it to the appropriate
+    generation pipeline.
+
+    Returns exactly one of:
+    - "standard_text"
+    - "visual_document"
+    - "pdf_document"
     """
-    router_system_prompt = """You are an intent routing classifier. Your sole purpose is to analyze the user's query and route it to the correct generation pipeline.
 
-Routing Rules:
-- If the user explicitly asks to generate a PDF document, PDF report, or PDF summary -> Output EXACTLY "pdf_document".
-- If the user explicitly asks to generate a diagram, schema, visual representation, roadmap, or flowchart (but NOT a PDF) -> Output EXACTLY "visual_document".
-- For any other query (e.g., standard questions, summaries, definitions, explanations, standard text generation) -> Output EXACTLY "standard_text".
+    router_system_prompt = """
+You are a strict intent classifier in a multi-modal generation pipeline.
 
-CRITICAL INSTRUCTIONS:
-- You must output ONLY one of the three exact strings: "pdf_document", "visual_document", or "standard_text".
-- Do NOT output any other text, punctuation, explanations, or conversational filler.
-- If you are unsure, default to "standard_text".
+Your ONLY task is to determine which generation pipeline should handle
+the user's request.
+
+AVAILABLE ROUTES:
+
+1. "pdf_document"
+Use this route when the user explicitly requests a document in PDF format,
+such as:
+- Generate a PDF
+- Create a PDF report
+- Make a PDF summary
+- Export this as a PDF
+- Create a PDF document
+- Produce a report in PDF format
+
+IMPORTANT:
+The word "report" alone does NOT imply PDF.
+Only use "pdf_document" when PDF output is explicitly requested.
+
+2. "visual_document"
+Use this route when the user explicitly asks to CREATE or GENERATE
+a visual representation, such as:
+- diagram
+- architecture diagram
+- system architecture
+- flowchart
+- workflow
+- schema
+- roadmap
+- mind map
+- timeline
+- visual representation
+- infographic
+- graph or visual illustration
+
+Examples:
+"Create a diagram of a RAG architecture"
+"Draw a flowchart for this process"
+"Generate a visual roadmap"
+"Show the architecture as a diagram"
+
+IMPORTANT:
+A request that merely asks to EXPLAIN a diagram, architecture, schema,
+or process in text should NOT be routed to "visual_document".
+It should be "standard_text" unless the user explicitly asks to create
+or generate a visual.
+
+3. "standard_text"
+Use this route for all other requests, including:
+- Questions and answers
+- Explanations
+- Definitions
+- Summaries
+- Translations
+- Code explanations
+- Text generation
+- Writing or rewriting
+- Comparisons
+- Tutorials
+- Lists
+- Reports without an explicit PDF request
+- Explanations of diagrams or architectures without asking to generate
+  a visual
+
+PRIORITY RULES:
+
+- If the user explicitly requests a PDF, choose "pdf_document".
+- Otherwise, if the user explicitly asks to CREATE/GENERATE/DRAW a visual,
+  choose "visual_document".
+- Otherwise, choose "standard_text".
+- Never infer a PDF request from words such as "report", "document",
+  or "summary".
+- Never infer a visual request merely because the topic involves
+  architecture, diagrams, schemas, or workflows.
+- If the request contains multiple possible intents, route according
+  to the requested OUTPUT FORMAT, not the subject of the request.
+- When uncertain, choose "standard_text".
+
+OUTPUT FORMAT:
+
+Return ONLY ONE of these exact strings:
+
+pdf_document
+visual_document
+standard_text
+
+Do NOT return:
+- explanations
+- JSON
+- markdown
+- quotes
+- punctuation
+- additional text
+
+USER QUERY:
+{user_query}
 """
-    
     # Utilisation d'un modèle léger et rapide pour le routage
     router_agent = Agent(
         model=Groq(id="openai/gpt-oss-120b"),
